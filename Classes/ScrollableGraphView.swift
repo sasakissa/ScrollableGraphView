@@ -74,7 +74,7 @@ import UIKit
     private var viewportWidth: CGFloat = 0 {
         didSet { if(oldValue != viewportWidth) { viewportDidChange() }}
     }
-    private var viewportHeight: CGFloat = 0 {
+    fileprivate var viewportHeight: CGFloat = 0 {
         didSet { if(oldValue != viewportHeight) { viewportDidChange() }}
     }
     
@@ -86,7 +86,7 @@ import UIKit
     
     // Graph Drawing
     private var drawingView = UIView()
-    private var plots: [Plot] = [Plot]()
+    fileprivate var plots: [Plot] = [Plot]()
     
     // Reference Lines
     private var referenceLineView: ReferenceLineDrawingView?
@@ -114,13 +114,17 @@ import UIKit
         }
     }
     
-    private var range: (min: Double, max: Double) = (0, 100) {
+    fileprivate var range: (min: Double, max: Double) = (0, 100) {
         didSet {
             if(oldValue.min != range.min || oldValue.max != range.max) {
                 if !isCurrentlySettingUp { rangeDidChange() }
             }
         }
     }
+    
+    // delegate for draggable
+    // #######################################
+    internal var touchEventDelegate: TouchEventDelegate?
     
     // MARK: - INIT, SETUP & VIEWPORT RESIZING
     // #######################################
@@ -1019,3 +1023,65 @@ public extension ScrollableGraphView : ScrollableGraphViewDataSource {
 }
 #endif
 
+struct PointInPlot {
+    let plotIdentifier: String
+    let index: Int
+}
+extension ScrollableGraphView {
+    override open func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        let touchLocation = touches.first?.location(in: self)
+        let pointInPlot = getNearestPointPosition(location: touchLocation!)
+        if (pointInPlot.index < 0) {
+            return
+        }
+        self.touchEventDelegate?.touchBegan(plotIdentifier: pointInPlot.plotIdentifier, index: pointInPlot.index)
+}
+    
+    override open func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        let touchLocation = touches.first?.location(in: self)
+        let newValue = getValuefromPosition(yPos: Double(touchLocation!.y))
+        self.touchEventDelegate?.touchMoved(newValue: newValue)
+    }
+    
+    override open func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        self.touchEventDelegate?.touchEnded()
+    }
+    
+    private func getNearestPointPosition(location: CGPoint) -> PointInPlot {
+        var plotIdentifier: String = ""
+        var minIndex: Int = -1
+        var minDistance: Double = Double.greatestFiniteMagnitude
+        
+        let numberOfDataPoints = dataSource?.numberOfPoints() ?? 0
+        let thres: Double = 10.0
+        
+        for plotId in 0..<plots.count {
+    
+            for i in 0..<numberOfDataPoints {
+                let pointLocation = calculatePosition(atIndex: i, value: (dataSource?.value(forPlot: plots[plotId], atIndex: i))!)
+                let distance: Double = hypot( Double(location.x - pointLocation.x), Double(location.y - pointLocation.y))
+                if distance < thres && distance < minDistance {
+                    minDistance = distance
+                    minIndex = i
+                    plotIdentifier = plots[plotId].identifier
+                }
+            }
+        }
+        return PointInPlot(plotIdentifier: plotIdentifier, index: minIndex)
+    }
+    
+    private func getValuefromPosition(yPos: Double) -> Double {
+        let rangeMax = (shouldAdaptRange) ? self.range.max : self.rangeMax
+        let rangeMin = (shouldAdaptRange) ? self.range.min : self.rangeMin
+        var graphHeight = viewportHeight - topMargin - bottomMargin
+        
+        if let ref = self.referenceLines {
+            if(ref.shouldShowLabels && ref.dataPointLabelFont != nil) {
+                graphHeight -= (ref.dataPointLabelFont!.pointSize + ref.dataPointLabelTopMargin + ref.dataPointLabelBottomMargin)
+            }
+        }
+
+        let value = (yPos - Double(topMargin)) * (rangeMin - rangeMax) / Double(graphHeight) + rangeMax
+        return value
+    }
+}
