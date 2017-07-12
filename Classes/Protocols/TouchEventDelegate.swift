@@ -10,7 +10,7 @@ import Foundation
 import UIKit
 
 protocol TouchEventDelegate {
-    func touchBegan(plotIdentifier: String, index: Int)
-    func touchMoved(newValue: Double)
+    func touchBegan(location: CGPoint, plotIdentifier: String, index: Int)
+    func touchMoved(location: CGPoint, newValue: Double)
     func touchEnded()
 }

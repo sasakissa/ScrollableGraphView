@@ -1034,13 +1034,13 @@ extension ScrollableGraphView {
         if (pointInPlot.index < 0) {
             return
         }
-        self.touchEventDelegate?.touchBegan(plotIdentifier: pointInPlot.plotIdentifier, index: pointInPlot.index)
+        self.touchEventDelegate?.touchBegan(location: touchLocation!, plotIdentifier: pointInPlot.plotIdentifier, index: pointInPlot.index)
 }
     
     override open func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         let touchLocation = touches.first?.location(in: self)
         let newValue = getValuefromPosition(yPos: Double(touchLocation!.y))
-        self.touchEventDelegate?.touchMoved(newValue: newValue)
+        self.touchEventDelegate?.touchMoved(location: touchLocation!, newValue: newValue)
     }
     
     override open func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
