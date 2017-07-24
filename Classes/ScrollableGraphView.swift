@@ -1098,29 +1098,38 @@ extension ScrollableGraphView {
     func updatePlot(newPlot: Plot) {
         for (index, plot) in plots.enumerated() {
             if plot.identifier == newPlot.identifier {
-                removeSubLayers(layers: plot.layers(forViewport: currentViewport()))
+                let subLayerIndex = removeSubLayers(plotIdentifier: plot.identifier)
                 plots[index] = newPlot
-                addSubLayers(layers: newPlot.layers(forViewport: currentViewport()))
+                insertSubLayers(layers: newPlot.layers(forViewport: currentViewport()), index: subLayerIndex)
                 updatePaths()
             }
         }
     }
 
-    private func removeSubLayers(layers: [ScrollableGraphViewDrawingLayer?]) {
-        for layer in layers {
-            if let layer = layer {
-                removeSubLayer(layer: layer)
-            }
-        }
-    }
-    // 既に追加されているsubLayerの中に,layerとowner: Plotが一致するものがあればremoveする
-    private func removeSubLayer(layer: ScrollableGraphViewDrawingLayer) {
-        for oldLayer in drawingView.layer.sublayers! {
-            if let oldLayer = oldLayer as? ScrollableGraphViewDrawingLayer, let owner = oldLayer.owner {
-                if owner.identifier == layer.owner?.identifier {
-                    oldLayer.removeFromSuperlayer()
+    // plotIdentifierをownerにもつsubLayerを取り除き，それらの中で最小のindexを返す
+    private func removeSubLayers(plotIdentifier: String) -> Int {
+        var minIndex = Int.max
+        for (index, layer) in drawingView.layer.sublayers!.enumerated() {
+            if let layer = layer as? ScrollableGraphViewDrawingLayer, let owner = layer.owner {
+                if owner.identifier == plotIdentifier {
+                    layer.removeFromSuperlayer()
+                    minIndex = index < minIndex ? index : minIndex
                 }
             }
         }
+        return minIndex
+    }
+
+
+    // indexから順にlayersをdrawingViewに挿入していく
+    private func insertSubLayers(layers: [ScrollableGraphViewDrawingLayer?], index: Int) {
+        var _index = index
+        for layer in layers {
+            if let layer = layer {
+                drawingView.layer.insertSublayer(layer, at: UInt32(_index))
+                _index += 1
+            }
+        }
+
     }
 }
