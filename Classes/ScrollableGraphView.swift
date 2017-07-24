@@ -1046,7 +1046,10 @@ extension ScrollableGraphView {
     override open func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         self.touchEventDelegate?.touchEnded()
     }
-    
+
+    /**
+    * 与えられたLocationに対して，閾値以下で最も近い頂点もつPlotのIdentifierと頂点のindexの構造体を返す
+    */
     private func getNearestPointPosition(location: CGPoint) -> PointInPlot {
         var plotIdentifier: String = ""
         var minIndex: Int = -1
@@ -1069,7 +1072,10 @@ extension ScrollableGraphView {
         }
         return PointInPlot(plotIdentifier: plotIdentifier, index: minIndex)
     }
-    
+
+    /**
+    * graphViewのframe上のy座標から，plotのy値への変換
+    */
     private func getValuefromPosition(yPos: Double) -> Double {
         let rangeMax = (shouldAdaptRange) ? self.range.max : self.rangeMax
         let rangeMin = (shouldAdaptRange) ? self.range.min : self.rangeMin
@@ -1085,6 +1091,10 @@ extension ScrollableGraphView {
         return value
     }
 
+    /**
+    * 与えられたplotに対して，identifierが同じものがplotListに含まれていれば，更新
+    * そのplotに関するsubLayerも描画し直す
+    */
     func updatePlot(newPlot: Plot) {
         for (index, plot) in plots.enumerated() {
             if plot.identifier == newPlot.identifier {
