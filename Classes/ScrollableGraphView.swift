@@ -68,7 +68,7 @@ import UIKit
     // MARK: - Private State
     // #####################
     
-    private var isInitialSetup = true
+    fileprivate var isInitialSetup = true
     private var isCurrentlySettingUp = false
     
     private var viewportWidth: CGFloat = 0 {
@@ -85,7 +85,7 @@ import UIKit
     private var zeroYPosition: CGFloat = 0
     
     // Graph Drawing
-    private var drawingView = UIView()
+    fileprivate var drawingView = UIView()
     fileprivate var plots: [Plot] = [Plot]()
     
     // Reference Lines
@@ -106,7 +106,7 @@ import UIKit
     
     // Active Points & Range Calculation
     private var previousActivePointsInterval: CountableRange<Int> = -1 ..< -1
-    private var activePointsInterval: CountableRange<Int> = -1 ..< -1 {
+    fileprivate var activePointsInterval: CountableRange<Int> = -1 ..< -1 {
         didSet {
             if(oldValue.lowerBound != activePointsInterval.lowerBound || oldValue.upperBound != activePointsInterval.upperBound) {
                 if !isCurrentlySettingUp { activePointsDidChange() }
@@ -266,14 +266,14 @@ import UIKit
         }
     }
     
-    private func addSubLayers(layers: [ScrollableGraphViewDrawingLayer?]) {
+    fileprivate func addSubLayers(layers: [ScrollableGraphViewDrawingLayer?]) {
         for layer in layers {
             if let layer = layer {
                 drawingView.layer.addSublayer(layer)
             }
         }
     }
-    
+
     private func addReferenceViewDrawingView() {
         
         guard let referenceLines = self.referenceLines else {
@@ -487,7 +487,7 @@ import UIKit
         updateLabelsForCurrentInterval()
     }
     
-    private func initPlot(plot: Plot, activePointsInterval: CountableRange<Int>) {
+    fileprivate func initPlot(plot: Plot, activePointsInterval: CountableRange<Int>) {
         
         #if !TARGET_INTERFACE_BUILDER
             plot.setup() // Only init the animations for plots if we are not in IB
@@ -1083,5 +1083,34 @@ extension ScrollableGraphView {
 
         let value = (yPos - Double(topMargin)) * (rangeMin - rangeMax) / Double(graphHeight) + rangeMax
         return value
+    }
+
+    func updatePlot(newPlot: Plot) {
+        for (index, plot) in plots.enumerated() {
+            if plot.identifier == newPlot.identifier {
+                removeSubLayers(layers: plot.layers(forViewport: currentViewport()))
+                plots[index] = newPlot
+                addSubLayers(layers: newPlot.layers(forViewport: currentViewport()))
+                updatePaths()
+            }
+        }
+    }
+
+    private func removeSubLayers(layers: [ScrollableGraphViewDrawingLayer?]) {
+        for layer in layers {
+            if let layer = layer {
+                removeSubLayer(layer: layer)
+            }
+        }
+    }
+    // 既に追加されているsubLayerの中に,layerとowner: Plotが一致するものがあればremoveする
+    private func removeSubLayer(layer: ScrollableGraphViewDrawingLayer) {
+        for oldLayer in drawingView.layer.sublayers! {
+            if let oldLayer = oldLayer as? ScrollableGraphViewDrawingLayer, let owner = oldLayer.owner {
+                if owner.identifier == layer.owner?.identifier {
+                    oldLayer.removeFromSuperlayer()
+                }
+            }
+        }
     }
 }
