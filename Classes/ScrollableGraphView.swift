@@ -1048,6 +1048,23 @@ extension ScrollableGraphView {
     }
 
     /**
+     * LongPressGestureRecognierへのコールバック
+     */
+    @objc func graphViewLongPressed(_ sender: UILongPressGestureRecognizer) {
+            if sender.state == .ended {
+                let touchLocation = sender.location(in: self)
+                guard let touchEventDelegate = self.touchEventDelegate else {
+                    return
+                }
+                let pointInPlot = getNearestPointPosition(location: touchLocation)
+                if (pointInPlot.index < 0) {
+                    return
+                }
+                touchEventDelegate.longPressed(location: touchLocation, plotIdentifier: pointInPlot.plotIdentifier, index: pointInPlot.index)
+        }
+    }
+
+    /**
     * 与えられたLocationに対して，閾値以下で最も近い頂点もつPlotのIdentifierと頂点のindexの構造体を返す
     */
     private func getNearestPointPosition(location: CGPoint) -> PointInPlot {
@@ -1063,7 +1080,7 @@ extension ScrollableGraphView {
             for i in 0..<numberOfDataPoints {
                 let pointLocation = calculatePosition(atIndex: i, value: (dataSource?.value(forPlot: plots[plotId], atIndex: i))!)
                 let distance: Double = hypot( Double(location.x - pointLocation.x), Double(location.y - pointLocation.y))
-                if distance < thres && distance < minDistance {
+                if distance < thres && distance < minDistance && plotIdentifier != "sum" {
                     minDistance = distance
                     minIndex = i
                     plotIdentifier = plots[plotId].identifier
@@ -1106,7 +1123,9 @@ extension ScrollableGraphView {
         }
     }
 
-    // plotIdentifierをownerにもつsubLayerを取り除き，それらの中で最小のindexを返す
+    /**
+    * plotIdentifierをownerにもつsubLayerを取り除き，それらの中で最小のindexを返す
+    */
     private func removeSubLayers(plotIdentifier: String) -> Int {
         var minIndex = Int.max
         for (index, layer) in drawingView.layer.sublayers!.enumerated() {
@@ -1120,8 +1139,9 @@ extension ScrollableGraphView {
         return minIndex
     }
 
-
-    // indexから順にlayersをdrawingViewに挿入していく
+    /**
+    * indexから順にlayersをdrawingViewに挿入していく
+    */
     private func insertSubLayers(layers: [ScrollableGraphViewDrawingLayer?], index: Int) {
         var _index = index
         for layer in layers {
@@ -1130,6 +1150,5 @@ extension ScrollableGraphView {
                 _index += 1
             }
         }
-
     }
 }

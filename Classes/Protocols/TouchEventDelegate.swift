@@ -13,4 +13,5 @@ protocol TouchEventDelegate {
     func touchBegan(location: CGPoint, plotIdentifier: String, index: Int)
     func touchMoved(location: CGPoint, newValue: Double)
     func touchEnded()
+    func longPressed(location: CGPoint, plotIdentifier: String, index: Int)
 }
