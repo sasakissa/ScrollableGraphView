@@ -1109,6 +1109,16 @@ extension ScrollableGraphView {
     }
 
     /**
+    * plotIdentifierのプロットのindex番目の点の座標を返す
+    */
+    func getPointPosition(plotIdentifier: String, index: Int) -> CGPoint? {
+        guard let plotId = Int(plotIdentifier) else {
+            return nil
+        }
+        return calculatePosition(atIndex: index, value: (dataSource?.value(forPlot: plots[plotId], atIndex: index))!)
+    }
+
+    /**
     * 与えられたplotに対して，identifierが同じものがplotListに含まれていれば，更新
     * そのplotに関するsubLayerも描画し直す
     */
