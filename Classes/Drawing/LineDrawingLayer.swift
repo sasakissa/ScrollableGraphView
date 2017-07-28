@@ -8,7 +8,11 @@ internal class LineDrawingLayer : ScrollableGraphViewDrawingLayer {
     private var lineStyle: ScrollableGraphViewLineStyle
     private var shouldFill: Bool
     private var lineCurviness: CGFloat
-    
+
+    // 過去データと未来で塗り分ける用のレイヤ
+    fileprivate var currentFillPastLinePath = UIBezierPath()
+    fileprivate var currentFillPlanLinePath = UIBezierPath()
+
     init(frame: CGRect, lineWidth: CGFloat, lineColor: UIColor, lineStyle: ScrollableGraphViewLineStyle, lineJoin: String, lineCap: String, shouldFill: Bool, lineCurviness: CGFloat) {
         
         self.lineStyle = lineStyle
@@ -102,11 +106,11 @@ internal class LineDrawingLayer : ScrollableGraphViewDrawingLayer {
         return currentLinePath
     }
     
-    private func addStraightLineSegment(startPoint: CGPoint, endPoint: CGPoint, inPath path: UIBezierPath) {
+    fileprivate func addStraightLineSegment(startPoint: CGPoint, endPoint: CGPoint, inPath path: UIBezierPath) {
         path.addLine(to: endPoint)
     }
     
-    private func addCurvedLineSegment(startPoint: CGPoint, endPoint: CGPoint, inPath path: UIBezierPath) {
+    fileprivate func addCurvedLineSegment(startPoint: CGPoint, endPoint: CGPoint, inPath path: UIBezierPath) {
         // calculate control points
         let difference = endPoint.x - startPoint.x
         
@@ -119,10 +123,154 @@ internal class LineDrawingLayer : ScrollableGraphViewDrawingLayer {
         let controlPointTwo = CGPoint(x: x, y: y)
         
         // add curve from start to end
-        currentLinePath.addCurve(to: endPoint, controlPoint1: controlPointOne, controlPoint2: controlPointTwo)
+//        currentLinePath.addCurve(to: endPoint, controlPoint1: controlPointOne, controlPoint2: controlPointTwo)
+        path.addCurve(to: endPoint, controlPoint1: controlPointOne, controlPoint2: controlPointTwo)
     }
     
     override func updatePath() {
         self.path = createLinePath().cgPath
     }
+}
+
+extension LineDrawingLayer {
+
+    func createFillPastLinePath() -> UIBezierPath {
+
+        guard let owner = owner else {
+            return UIBezierPath()
+        }
+
+        guard let splitPointIndex = (owner as! LinePlot).splitPointIndex else {
+            return UIBezierPath()
+        }
+
+        // Can't really do anything without the delegate.
+        guard let delegate = self.owner?.graphViewDrawingDelegate else {
+            return currentFillPastLinePath
+        }
+
+        currentFillPastLinePath.removeAllPoints()
+
+        let activePointsInterval = delegate.intervalForActivePoints()
+
+//        let splitPos = self.owner?.graphViewDrawingDelegate.calculatePosition(atIndex: splitPointIndex, value: Double(owner.graphPoint(forIndex: splitPointIndex).y))
+
+        // 描画範囲内に当日が存在するか確認
+        if !(activePointsInterval.lowerBound...activePointsInterval.upperBound ~= splitPointIndex) {
+            return UIBezierPath()
+        }
+
+        let pointPadding = delegate.paddingForPoints()
+
+        let min = delegate.rangeForActivePoints().min
+        zeroYPosition = delegate.calculatePosition(atIndex: 0, value: min).y
+
+        let viewport = delegate.currentViewport()
+        let viewportWidth = viewport.width
+        let viewportHeight = viewport.height
+
+        // Connect the line to the starting edge if we are filling it.
+
+        // Add a line from the base of the graph to the first data point.
+        let firstDataPoint = owner.graphPoint(forIndex: activePointsInterval.lowerBound)
+
+        let viewportLeftZero = CGPoint(x: firstDataPoint.location.x - (pointPadding.leftmostPointPadding), y: zeroYPosition)
+        let leftFarEdgeTop = CGPoint(x: firstDataPoint.location.x - (pointPadding.leftmostPointPadding + viewportWidth), y: zeroYPosition)
+        let leftFarEdgeBottom = CGPoint(x: firstDataPoint.location.x - (pointPadding.leftmostPointPadding + viewportWidth), y: viewportHeight)
+
+        currentFillPastLinePath.move(to: leftFarEdgeBottom)
+        addCurvedLineSegment(startPoint: leftFarEdgeBottom, endPoint: leftFarEdgeTop, inPath: currentFillPastLinePath)
+        addCurvedLineSegment(startPoint: leftFarEdgeTop, endPoint: viewportLeftZero, inPath: currentFillPastLinePath)
+        addCurvedLineSegment(startPoint: viewportLeftZero, endPoint: CGPoint(x: firstDataPoint.location.x, y: firstDataPoint.location.y), inPath: currentFillPastLinePath)
+
+
+        // Connect each point on the graph with a segment.
+        for i in activePointsInterval.lowerBound...splitPointIndex-1 {
+
+            let startPoint = owner.graphPoint(forIndex: i).location
+            let endPoint = owner.graphPoint(forIndex: i+1).location
+
+            addCurvedLineSegment(startPoint: startPoint, endPoint: endPoint, inPath: currentFillPastLinePath)
+        }
+
+        // Connect the line to the ending edge if we are filling it.
+        // Add a line from the last data point to the base of the graph.
+        let lastDataPoint = owner.graphPoint(forIndex: splitPointIndex).location
+
+        let viewportRightZero = CGPoint(x: lastDataPoint.x , y: zeroYPosition)
+
+        addStraightLineSegment(startPoint: lastDataPoint, endPoint: viewportRightZero, inPath: currentFillPastLinePath)
+
+        return currentFillPastLinePath
+    }
+
+    func createFillPlanLinePath() -> UIBezierPath {
+
+        guard let owner = owner else {
+            return UIBezierPath()
+        }
+
+        guard let splitPointIndex = (owner as! LinePlot).splitPointIndex else {
+            return UIBezierPath()
+        }
+
+
+        // Can't really do anything without the delegate.
+        guard let delegate = self.owner?.graphViewDrawingDelegate else {
+            return currentFillPlanLinePath
+        }
+
+        currentFillPlanLinePath.removeAllPoints()
+
+        let activePointsInterval = delegate.intervalForActivePoints()
+
+//        let splitPos = self.owner?.graphViewDrawingDelegate.calculatePosition(atIndex: splitPointIndex, value: Double(owner.graphPoint(forIndex: splitPointIndex).y))
+
+        // 描画範囲内に当日が存在するか確認
+        if !(activePointsInterval.lowerBound...activePointsInterval.upperBound ~= splitPointIndex) {
+            return UIBezierPath()
+        }
+
+        let pointPadding = delegate.paddingForPoints()
+
+        let min = delegate.rangeForActivePoints().min
+        zeroYPosition = delegate.calculatePosition(atIndex: 0, value: min).y
+
+        let viewport = delegate.currentViewport()
+        let viewportWidth = viewport.width
+        let viewportHeight = viewport.height
+
+        // Connect the line to the starting edge if we are filling it.
+        // Add a line from the base of the graph to the first data point.
+        let firstDataPoint = owner.graphPoint(forIndex: splitPointIndex)
+
+        let viewportLeftZero = CGPoint(x: firstDataPoint.location.x , y: zeroYPosition)
+
+        currentFillPlanLinePath.move(to: viewportLeftZero)
+        addStraightLineSegment(startPoint: viewportLeftZero, endPoint: firstDataPoint.location, inPath: currentFillPlanLinePath)
+
+        // Connect each point on the graph with a segment.
+        for i in splitPointIndex ..< activePointsInterval.upperBound-1 {
+
+            let startPoint = owner.graphPoint(forIndex: i).location
+            let endPoint = owner.graphPoint(forIndex: i+1).location
+
+            addCurvedLineSegment(startPoint: startPoint, endPoint: endPoint, inPath: currentFillPlanLinePath)
+        }
+
+        // Connect the line to the ending edge if we are filling it.
+        // Add a line from the last data point to the base of the graph.
+        let lastDataPoint = owner.graphPoint(forIndex: activePointsInterval.upperBound - 1).location
+
+        let viewportRightZero = CGPoint(x: lastDataPoint.x + (pointPadding.rightmostPointPadding), y: zeroYPosition)
+        let rightFarEdgeTop = CGPoint(x: lastDataPoint.x + (pointPadding.rightmostPointPadding + viewportWidth), y: zeroYPosition)
+        let rightFarEdgeBottom = CGPoint(x: lastDataPoint.x + (pointPadding.rightmostPointPadding + viewportWidth), y: viewportHeight)
+
+        addCurvedLineSegment(startPoint: lastDataPoint, endPoint: viewportRightZero, inPath: currentFillPlanLinePath)
+        addCurvedLineSegment(startPoint: viewportRightZero, endPoint: rightFarEdgeTop, inPath: currentFillPlanLinePath)
+        addCurvedLineSegment(startPoint: rightFarEdgeTop, endPoint: rightFarEdgeBottom, inPath: currentFillPlanLinePath)
+
+        return currentFillPlanLinePath
+    }
+
 }

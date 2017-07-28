@@ -500,7 +500,7 @@ import UIKit
             let dataForInitialPoints = getData(forPlot: plot, andActiveInterval: activePointsInterval)
             plot.setPlotPointPositions(forNewlyActivatedPoints: activePointsInterval, withData: dataForInitialPoints)
         }
-        
+        removeSubLayers(plotIdentifier: plot.identifier)
         addSubLayers(layers: plot.layers(forViewport: currentViewport()))
     }
 
@@ -1136,9 +1136,12 @@ extension ScrollableGraphView {
     /**
     * plotIdentifierをownerにもつsubLayerを取り除き，それらの中で最小のindexを返す
     */
-    private func removeSubLayers(plotIdentifier: String) -> Int {
+    fileprivate func removeSubLayers(plotIdentifier: String) -> Int {
         var minIndex = Int.max
-        for (index, layer) in drawingView.layer.sublayers!.enumerated() {
+        guard let oldSublayers = drawingView.layer.sublayers else {
+            return -1
+        }
+        for (index, layer) in oldSublayers.enumerated() {
             if let layer = layer as? ScrollableGraphViewDrawingLayer, let owner = layer.owner {
                 if owner.identifier == plotIdentifier {
                     layer.removeFromSuperlayer()

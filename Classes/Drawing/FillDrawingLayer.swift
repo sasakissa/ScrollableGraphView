@@ -6,10 +6,12 @@ internal class FillDrawingLayer : ScrollableGraphViewDrawingLayer {
     // Fills are only used with lineplots and we need
     // to know what the line looks like.
     private var lineDrawingLayer: LineDrawingLayer
+    private var fillDataType: FillDataType
     
-    init(frame: CGRect, fillColor: UIColor, lineDrawingLayer: LineDrawingLayer) {
+    init(frame: CGRect, fillColor: UIColor, lineDrawingLayer: LineDrawingLayer, fillDataType: FillDataType) {
         
         self.lineDrawingLayer = lineDrawingLayer
+        self.fillDataType = fillDataType
         super.init(viewportWidth: frame.size.width, viewportHeight: frame.size.height)
         self.fillColor = fillColor.cgColor
     }
@@ -19,6 +21,20 @@ internal class FillDrawingLayer : ScrollableGraphViewDrawingLayer {
     }
     
     override func updatePath() {
-        self.path = lineDrawingLayer.createLinePath().cgPath
+        switch self.fillDataType {
+        case .Normal:
+            self.path = lineDrawingLayer.createLinePath().cgPath
+        case .Past:
+            self.path = lineDrawingLayer.createFillPastLinePath().cgPath
+        case .Plan:
+            self.path = lineDrawingLayer.createFillPlanLinePath().cgPath
+        }
+
     }
+}
+
+enum FillDataType {
+    case Past
+    case Plan
+    case Normal
 }

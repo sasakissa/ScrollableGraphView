@@ -52,7 +52,8 @@ open class LinePlot : Plot {
     open var fillType = ScrollableGraphViewFillType.solid
     
     /// If fillType is set to .Solid then this colour will be used to fill the graph.
-    open var fillColor: UIColor = UIColor.black
+    open var fillPlanColor: UIColor = UIColor.black
+    open var fillPastColor: UIColor = UIColor.lightGray
     
     /// If fillType is set to .Gradient then this will be the starting colour for the gradient.
     open var fillGradientStartColor: UIColor = UIColor.white
@@ -71,12 +72,15 @@ open class LinePlot : Plot {
     
     /// If fillType is set to .Gradient, then this defines whether the gradient is rendered as a linear gradient or radial gradient.
     open var fillGradientType = ScrollableGraphViewGradientType.linear
+
+    open var splitPointIndex: Int?
     
     // Private State
     // #############
     
     private var lineLayer: LineDrawingLayer?
-    private var fillLayer: FillDrawingLayer?
+    private var fillPastLayer: FillDrawingLayer?
+    private var fillPlanLayer: FillDrawingLayer?
     private var gradientLayer: GradientDrawingLayer?
     
     public init(identifier: String) {
@@ -86,7 +90,7 @@ open class LinePlot : Plot {
     
     override func layers(forViewport viewport: CGRect) -> [ScrollableGraphViewDrawingLayer?] {
         createLayers(viewport: viewport)
-        return [lineLayer, fillLayer, gradientLayer]
+        return [lineLayer, fillPastLayer, fillPlanLayer, gradientLayer]
     }
     
     private func createLayers(viewport: CGRect) {
@@ -102,7 +106,8 @@ open class LinePlot : Plot {
         case .solid:
             if(shouldFill) {
                 // Setup fill
-                fillLayer = FillDrawingLayer(frame: viewport, fillColor: fillColor, lineDrawingLayer: lineLayer!)
+                fillPastLayer = FillDrawingLayer(frame: viewport, fillColor: fillPastColor, lineDrawingLayer: lineLayer!, fillDataType: .Past)
+                fillPlanLayer = FillDrawingLayer(frame: viewport, fillColor: fillPlanColor, lineDrawingLayer: lineLayer!, fillDataType: .Plan)
             }
             
         case .gradient:
@@ -112,7 +117,8 @@ open class LinePlot : Plot {
         }
         
         lineLayer?.owner = self
-        fillLayer?.owner = self
+        fillPastLayer?.owner = self
+        fillPlanLayer?.owner = self
         gradientLayer?.owner = self
     }
 }
