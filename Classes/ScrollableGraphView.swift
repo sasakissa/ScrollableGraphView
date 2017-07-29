@@ -1051,7 +1051,7 @@ extension ScrollableGraphView {
      * LongPressGestureRecognierへのコールバック
      */
     @objc func graphViewLongPressed(_ sender: UILongPressGestureRecognizer) {
-            if sender.state == .ended {
+            if sender.state == .began {
                 let touchLocation = sender.location(in: self)
                 guard let touchEventDelegate = self.touchEventDelegate else {
                     return
