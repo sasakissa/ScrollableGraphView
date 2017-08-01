@@ -153,12 +153,19 @@ extension LineDrawingLayer {
 
         let activePointsInterval = delegate.intervalForActivePoints()
 
-//        let splitPos = self.owner?.graphViewDrawingDelegate.calculatePosition(atIndex: splitPointIndex, value: Double(owner.graphPoint(forIndex: splitPointIndex).y))
-
         // 描画範囲内に当日が存在するか確認
-        if !(activePointsInterval.lowerBound...activePointsInterval.upperBound ~= splitPointIndex) {
+        if splitPointIndex <= activePointsInterval.lowerBound {
+            // 描画範囲内の左端が当日
             return UIBezierPath()
+        } else if splitPointIndex >= activePointsInterval.upperBound {
+            // 描画範囲内の右端が当日
+            currentFillPastLinePath = createLinePath()
+            return currentFillPastLinePath
         }
+
+//        if !(activePointsInterval.lowerBound+1...activePointsInterval.upperBound ~= splitPointIndex) {
+//            return UIBezierPath()
+//        }
 
         let pointPadding = delegate.paddingForPoints()
 
@@ -224,12 +231,19 @@ extension LineDrawingLayer {
 
         let activePointsInterval = delegate.intervalForActivePoints()
 
-//        let splitPos = self.owner?.graphViewDrawingDelegate.calculatePosition(atIndex: splitPointIndex, value: Double(owner.graphPoint(forIndex: splitPointIndex).y))
-
         // 描画範囲内に当日が存在するか確認
-        if !(activePointsInterval.lowerBound...activePointsInterval.upperBound ~= splitPointIndex) {
+        if splitPointIndex <= activePointsInterval.lowerBound {
+            // 描画範囲内の左端以前が当日
+            currentFillPlanLinePath = createLinePath()
+            return currentFillPlanLinePath
+        } else if splitPointIndex >= activePointsInterval.upperBound {
+            // 描画範囲内の右端以降が当日
             return UIBezierPath()
         }
+
+//        if !(activePointsInterval.lowerBound...activePointsInterval.upperBound ~= splitPointIndex) {
+//            return UIBezierPath()
+//        }
 
         let pointPadding = delegate.paddingForPoints()
 
